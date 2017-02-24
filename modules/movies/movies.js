@@ -5,32 +5,57 @@ Module.register("movies", {
         text: "Hello World!",
         animationSpeed: 1000,
         retryDelay: 2500,
-        updateFrequency: 1000
+        updateFrequency: 60*5*1000
     },
 
     start: function() {
         console.log(this.name + ' is started!');
         this.loaded = false;
+        this.movies = null;
         this.scheduleUpdate(1000);
 
     },
 
-    getDom: function() {
+    getStyles: function() {
+        return ["movie_styles.css"];
+    },
 
+    getDom: function() {
         var wrapper = document.createElement("div");
-        wrapper.innerHTML = "TEST";
+        wrapper.className = "medium";
+        wrapper.innerHTML = "Movies opening this week"
+
+        var large = document.createElement("div");
+
+        if (this.movies == null) {
+            return wrapper;
+        }
+
+        for (i = 0; i < this.movies.length; i++) {
+            var movie = document.createElement("span");
+            movie.className = "dimmed light small";
+            movie.innerHTML = " " + this.movies[i] + "<br>";
+            large.appendChild(movie);
+        }
+
+        wrapper.appendChild(large);
+
         return wrapper;
     },
 
     processMovieResponse: function(JSONresults) {
-        var movies = [];
-        for (i = 0; i < JSONresults.results.length; i++) {
+        this.movies = [];
+        for (i = 0; i < JSONresults.results.length, i < 5; i++) {
             var movie = JSONresults.results[i];
             if (movie.original_language == 'en') {
-                movies.push(movie.original_title);
+                this.movies.push(movie.original_title);
             }
         }
-        console.log(movies);
+        console.log(this.movies);
+        this.show(this.config.animationSpeed, { lockString: "movie_module_identifier" });
+        this.loaded = true;
+        this.updateDom(this.config.animationSpeed);
+
     },
 
     updateMovieList: function() {
@@ -64,8 +89,6 @@ Module.register("movies", {
             }
         };
         movieRequest.send();
-        this.loaded = true;
-        this.show(this.config.animationSpeed, { lockString: "movie_module_identifier" });
     },
 
     scheduleUpdate: function(delay) {
