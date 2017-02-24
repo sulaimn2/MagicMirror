@@ -1,58 +1,83 @@
 //movies.js
 
-Module.register("helloworld", {
+Module.register("movies", {
     defaults: {
-        text: "Hello World!"
+        text: "Hello World!",
+        animationSpeed: 1000,
+        retryDelay: 2500,
+        updateFrequency: 1000
+    },
+
+    start: function() {
+        console.log(this.name + ' is started!');
+        this.loaded = false;
+        this.scheduleUpdate(1000);
+
     },
 
     getDom: function() {
+
         var wrapper = document.createElement("div");
-        wrapper.innerHTML = this.getData();
+        wrapper.innerHTML = "TEST";
         return wrapper;
     },
 
-    getData: function() {
-        var http = require('http');
+    processMovieResponse: function(JSONresults) {
+        var movies = [];
+        for (i = 0; i < JSONresults.results.length; i++) {
+            var movie = JSONresults.results[i];
+            if (movie.original_language == 'en') {
+                movies.push(movie.original_title);
+            }
+        }
+        console.log(movies);
+    },
+
+    updateMovieList: function() {
         var today = new Date();
         var date = today.getFullYear() + '-' + (today.getMonth() + 1) + '-' + today.getDate();
         var nextWeek = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
         var nextWeekDate = nextWeek.getFullYear() + '-' + (nextWeek.getMonth() + 1) + '-' + nextWeek.getDate();
+        var url = 'http://api.themoviedb.org/3/discover/movie?api_key=d75905bcb2a9eef575bbaa98796b372b&language=en-US&sort_by=popularity.desc&include_adult=false&include_video=false&page=1&primary_release_date.gte=' + date + '&primary_release_date.lte=' + nextWeekDate;
+        var self = this;
+        var retry = true;
 
-        var queryString = '/3/discover/movie?api_key=d75905bcb2a9eef575bbaa98796b372b&language=en-US&sort_by=popularity.desc&include_adult=false&include_video=false&page=1&primary_release_date.gte=' + date + '&primary_release_date.lte=' + nextWeekDate;
+        var movieRequest = new XMLHttpRequest();
+        movieRequest.open("GET", url, true);
+        movieRequest.onreadystatechange = function() {
+            if (this.readyState === 4) {
+                if (this.status === 200) {
+                    self.processMovieResponse(JSON.parse(this.response));
+                    //console.log(this.response);
+                } else if (this.status === 401) {
+                    //self.updateDom(self.config.animationSpeed);
 
-        var options = {
-            host: 'api.themoviedb.org',
-            path: queryString
-        };
-
-        callback = function(response) {
-            var str = '';
-
-            //another chunk of data has been recieved, so append it to `str`
-            response.on('data', function(chunk) {
-                str += chunk;
-            });
-
-            //the whole response has been recieved, so we just print it out here
-            response.on('end', function() {
-
-                var JSONresults = JSON.parse(str);
-                var movies = [];
-                for (i = 0; i < JSONresults.results.length; i++) {
-                    var movie = JSONresults.results[i];
-                    if (movie.original_language == 'en') {
-                        movies.push(movie.original_title);
-                    }
+                    console.log(self.name + ": Incorrect APPID.");
+                    retry = true;
+                } else {
+                    console.log(self.name + ": Could not load weather.");
                 }
-                console.log(movies);
-            });
+
+                if (retry) {
+                    self.scheduleUpdate((self.loaded) ? -1 : self.config.retryDelay);
+                }
+            }
+        };
+        movieRequest.send();
+        this.loaded = true;
+        this.show(this.config.animationSpeed, { lockString: "movie_module_identifier" });
+    },
+
+    scheduleUpdate: function(delay) {
+        var nextLoad = this.config.updateFrequency;
+        if (typeof delay !== "undefined" && delay >= 0) {
+            nextLoad = delay;
         }
-
-        var req = http.request(options, callback).end();
-
-        return req;
-
-    }
+        var self = this;
+        setTimeout(function() {
+            self.updateMovieList();
+        }, nextLoad);
+    },
 });
 
 //api key: d75905bcb2a9eef575bbaa98796b372b
