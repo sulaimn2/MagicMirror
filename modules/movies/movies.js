@@ -33,7 +33,7 @@ Module.register("movies", {
 
         for (i = 0; i < this.movies.length; i++) {
             var movie = document.createElement("span");
-            movie.className = "dimmed light small";
+            movie.className = "light small";
             movie.innerHTML = " " + this.movies[i] + "<br>";
             large.appendChild(movie);
         }
